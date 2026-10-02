@@ -32,7 +32,15 @@ async function loadClientCredentials() {
   console.error('Loading client credentials from:', CLIENT_CREDENTIALS_PATH);
   try {
     const credentialsContent = await fs.readFile(CLIENT_CREDENTIALS_PATH, 'utf8');
-    return JSON.parse(credentialsContent).web;
+    const credentials = z.object({
+      installed: z.unknown().optional(),
+      web: z.unknown().optional()
+    }).parse(JSON.parse(credentialsContent));
+    return z.object({
+      client_id: z.string().min(1),
+      client_secret: z.string().min(1),
+      redirect_uris: z.array(z.url()).nonempty()
+    }).parse(credentials.installed !== undefined ? credentials.installed : credentials.web);
   } catch (error) {
     console.error('Failed to load client credentials:', errorMessage(error));
     throw new Error(`Failed to load client credentials: ${errorMessage(error)}`);
@@ -78,7 +86,8 @@ async function loadCredentials() {
   }
   console.error('Credentials loaded:', credentials.access_token ? 'Access token present' : 'No access token');
 
-  const auth = new google.auth.OAuth2();
+  const client = await loadClientCredentials();
+  const auth = new google.auth.OAuth2(client.client_id, client.client_secret);
   auth.setCredentials(credentials);
 
   // Handle token refresh

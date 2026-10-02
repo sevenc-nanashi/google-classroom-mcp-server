@@ -45,7 +45,7 @@ aube dlx @smithery/cli install @faizan45640/google-classroom-mcp-server --client
 aube install --frozen-lockfile
 ```
 
-3. Place your Google OAuth client credentials in a file named `credentials.json` in the project root:
+3. Place your Google OAuth client credentials in a file named `credentials.json` in the project root. Both **Web application** (`web`) and **Desktop app** (`installed`) credentials are supported. For a web application:
 
 ```json
 {
@@ -60,6 +60,20 @@ aube install --frozen-lockfile
   }
 }
 ```
+
+For a desktop app, use the downloaded JSON with its `installed` key unchanged, for example:
+
+```json
+{
+  "installed": {
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uris": ["http://localhost"]
+  }
+}
+```
+
+Desktop authentication uses an available local port automatically. If both keys are present, `installed` takes precedence. When switching OAuth clients, run the authentication command again to replace the saved tokens.
 
 4. Authenticate with Google:
 
