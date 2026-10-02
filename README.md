@@ -1,3 +1,15 @@
+# sevenc-nanashi/google-classroom-mcp-server
+
+This is a customized fork of [faizan45640/google-classroom-mcp-server](https://github.com/faizan45640/google-classroom-mcp-server) with additional features and improvements.
+
+Changes:
+
+- Use Node.js v24 and aube
+- Migrate to TypeScript
+- Add HTTP server mode
+
+----
+
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/faizan45640-google-classroom-mcp-server-badge.png)](https://mseep.ai/app/faizan45640-google-classroom-mcp-server)
 
 # Google Classroom MCP Server
@@ -9,7 +21,8 @@ An MCP (Model Context Protocol) server that provides access to Google Classroom 
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
+- Node.js 24 LTS or higher
+- [aube 2.5.0](https://aube.sh/installation.html)
 - A Google Cloud Platform project with the Google Classroom API enabled
 - OAuth 2.0 client credentials for the Google Classroom API
 
@@ -20,7 +33,7 @@ An MCP (Model Context Protocol) server that provides access to Google Classroom 
 To install Google Classroom MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@faizan45640/google-classroom-mcp-server):
 
 ```bash
-npx -y @smithery/cli install @faizan45640/google-classroom-mcp-server --client claude
+aube dlx @smithery/cli install @faizan45640/google-classroom-mcp-server --client claude
 ```
 
 #### Installing Manually
@@ -28,7 +41,7 @@ npx -y @smithery/cli install @faizan45640/google-classroom-mcp-server --client c
 2. Install dependencies:
 
 ```bash
-npm install
+aube install --frozen-lockfile
 ```
 
 3. Place your Google OAuth client credentials in a file named `credentials.json` in the project root:
@@ -50,7 +63,7 @@ npm install
 4. Authenticate with Google:
 
 ```bash
-node index.js auth
+node index.ts auth
 ```
 
 This will launch a browser window to complete the OAuth flow and save your credentials to `tokens.json`.
@@ -63,7 +76,7 @@ This will launch a browser window to complete the OAuth flow and save your crede
     "class": {
       "command": "node",
       "args": [
-        "PATH_TO_YOUR_DIRECTORY\\index.js"
+        "PATH_TO_YOUR_DIRECTORY\\index.ts"
       ]
     }
   }
@@ -71,6 +84,23 @@ This will launch a browser window to complete the OAuth flow and save your crede
 ```
 
 ## Usage
+
+The TypeScript source runs directly on Node.js 24. To check types, run:
+
+```bash
+aube run typecheck
+```
+
+### HTTP mode
+
+After authenticating with `node index.ts auth`, start the Streamable HTTP server:
+
+```bash
+node index.ts http
+```
+
+Connect an MCP HTTP client to `http://127.0.0.1:3000/mcp`. Set `PORT` to use another port, for example `PORT=3001 node index.ts http`.
+HTTP mode is stateless and listens only on the local loopback interface. It uses the same saved Google credentials as stdio mode. Run `node index.ts` for stdio mode.
 
 ### Available Tools
 
@@ -121,7 +151,7 @@ If you encounter permission errors, try:
 
 1. Running the auth command again to refresh permissions:
    ```
-   node index.js auth
+   node index.ts auth
    ```
 
 2. Ensuring your Google account is added as a test user in the Google Cloud Console if your app is in testing mode
