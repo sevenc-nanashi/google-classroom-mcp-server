@@ -51,6 +51,7 @@ async function authenticateAndSaveCredentials() {
       'https://www.googleapis.com/auth/classroom.courses.readonly',
       'https://www.googleapis.com/auth/classroom.announcements.readonly',
       'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+      'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
       'https://www.googleapis.com/auth/classroom.rosters.readonly'
     ],
   });
@@ -236,6 +237,33 @@ function createMcpServer() {
 
         return {
           content: [{ type: "text", text: `Error fetching course details: ${errorMessage(error)}` }]
+        };
+      }
+    }
+  );
+
+  server.tool("course-work-materials",
+    {
+      courseId: z.string().min(1).describe("The ID of the course to get materials for"),
+      pageSize: z.number().int().positive().optional().describe("Maximum number of materials to return"),
+      pageToken: z.string().min(1).optional().describe("nextPageToken from the previous response; keep other parameters unchanged")
+    },
+    async ({ courseId, pageSize, pageToken }) => {
+      try {
+        const classroom = await setupClassroomClient();
+        const materials = await classroom.courses.courseWorkMaterials.list({ courseId, pageSize, pageToken });
+        return {
+          content: [{ type: "text", text: JSON.stringify(materials.data) }]
+        };
+      } catch (error) {
+        const message = errorMessage(error);
+        console.error(`Error fetching course work materials for ${courseId}:`, message);
+        return {
+          isError: true,
+          content: [{
+            type: "text",
+            text: `Error fetching course work materials: ${message}. For missing credentials or insufficient scopes, run \`node index.ts auth\` and grant classroom.courseworkmaterials.readonly.`
+          }]
         };
       }
     }

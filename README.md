@@ -7,6 +7,7 @@ Changes:
 - Use Node.js v24 and aube
 - Migrate to TypeScript
 - Add HTTP server mode
+- Add course work materials retrieval
 
 ----
 
@@ -130,11 +131,24 @@ Use the 'assignments' tool with the courseId parameter to get assignments and yo
 Parameters:
 - `courseId`: The ID of the course (can be obtained from the `courses` tool)
 
+#### 4. `course-work-materials` - Get materials for a specific course
+
+Parameters:
+
+- `courseId`: The course ID from the `courses` tool (required)
+- `pageSize`: Maximum number of materials per page (optional; uses the API default)
+- `pageToken`: The previous response's `nextPageToken` (optional)
+
+Returns the [Classroom API response](https://developers.google.com/workspace/classroom/reference/rest/v1/courses.courseWorkMaterials/list), including `courseWorkMaterial` entries and `nextPageToken` when another page is available. Pass that token with the same other parameters to retrieve the next page. An empty result may omit `courseWorkMaterial`.
+
+Existing users must run `node index.ts auth` again to grant the new `classroom.courseworkmaterials.readonly` scope before using this tool.
+
 ### Example Prompts for Claude
 
 1. Show me all my Google Classroom courses
 2. Get details for my Math course with ID 123456789
 3. Show me all assignments for my History course with ID 987654321
+4. Show me the course work materials for my History course with ID 987654321
 
 ## Permissions
 
@@ -143,6 +157,7 @@ The server requests the following Google Classroom API permissions:
 - `classroom.courses.readonly` - To access course information
 - `classroom.announcements.readonly` - To access course announcements
 - `classroom.coursework.me.readonly` - To access your coursework and assignments
+- `classroom.courseworkmaterials.readonly` - To access course work materials
 - `classroom.rosters.readonly` - To access class rosters
 
 ## Troubleshooting
