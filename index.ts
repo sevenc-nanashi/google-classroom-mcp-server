@@ -279,8 +279,9 @@ function createMcpServer() {
   );
 
   server.tool("assignments",
+    "Get all course assignments and your submission status, including unsubmitted work, lateness, and grades",
     {
-      courseId: z.string().describe("The ID of the course to get assignments for")
+      courseId: z.string().min(1).describe("The ID of the course to get assignments for")
     },
     async ({ courseId }) => {
       try {
@@ -296,59 +297,46 @@ function createMcpServer() {
           throw new Error(`Failed to verify course: ${errorMessage(courseError)}`);
         }
 
-        // Get course work (assignments)
-        console.error('Fetching course assignments...');
-        let courseWork;
-        try {
-          courseWork = await classroom.courses.courseWork.list({
-            courseId: courseId,
+        const assignments: classroom_v1.Schema$CourseWork[] = [];
+        let assignmentsPageToken: string | undefined;
+        do {
+          const response = await classroom.courses.courseWork.list({
+            courseId,
             pageSize: 50,
-            orderBy: 'dueDate desc' // Get assignments ordered by due date
+            orderBy: 'dueDate desc',
+            pageToken: assignmentsPageToken
           });
-          console.error(`Assignments fetched successfully: ${courseWork.data.courseWork?.length || 0} found`);
-        } catch (workError) {
-          console.error('Error fetching assignments:', errorMessage(workError));
-          throw new Error(`Failed to fetch assignments: ${errorMessage(workError)}`);
-        }
-
-        // Get student submissions for the assignments if available
-        let submissions: classroom_v1.Schema$StudentSubmission[] = [];
-        try {
-          if (courseWork.data.courseWork && courseWork.data.courseWork.length > 0) {
-            console.error('Fetching your submissions for assignments...');
-            // For simplicity, getting submissions for the first few assignments
-            const assignmentsToCheck = courseWork.data.courseWork.slice(0, 5);
-
-            for (const work of assignmentsToCheck) {
-              try {
-                const submissionResponse = await classroom.courses.courseWork.studentSubmissions.list({
-                  courseId: courseId,
-                  courseWorkId: work.id!,
-                  states: ['TURNED_IN', 'RETURNED', 'RECLAIMED_BY_STUDENT']
-                });
-
-                if (submissionResponse.data.studentSubmissions) {
-                  submissions = submissions.concat(submissionResponse.data.studentSubmissions);
-                }
-              } catch (submissionError) {
-                console.error(`Error fetching submissions for assignment ${work.id}:`, errorMessage(submissionError));
-                // Continue with other assignments even if one fails
-              }
-            }
-            console.error(`Submissions fetched: ${submissions.length} found`);
+          if (response.data.courseWork) {
+            assignments.push(...response.data.courseWork);
           }
-        } catch (submissionsError) {
-          console.error('Error in submissions process:', errorMessage(submissionsError));
-          // Don't throw, just continue without submissions
-        }
+          if (!response.data.nextPageToken) break;
+          assignmentsPageToken = response.data.nextPageToken;
+        } while (true);
+
+        // Include every submission state, including work not yet turned in.
+        const submissions: classroom_v1.Schema$StudentSubmission[] = [];
+        let submissionsPageToken: string | undefined;
+        do {
+          const response = await classroom.courses.courseWork.studentSubmissions.list({
+            courseId,
+            courseWorkId: '-',
+            userId: 'me',
+            pageToken: submissionsPageToken
+          });
+          if (response.data.studentSubmissions) {
+            submissions.push(...response.data.studentSubmissions);
+          }
+          if (!response.data.nextPageToken) break;
+          submissionsPageToken = response.data.nextPageToken;
+        } while (true);
 
         // Format the response
         const result = {
           courseId: courseId,
-          assignments: courseWork.data.courseWork || [],
-          yourSubmissions: submissions.length > 0 ? submissions : [],
+          assignments,
+          yourSubmissions: submissions,
           summary: {
-            totalAssignments: courseWork.data.courseWork?.length || 0,
+            totalAssignments: assignments.length,
             submissionsFound: submissions.length
           }
         };
@@ -362,6 +350,7 @@ function createMcpServer() {
 
         if (errorMessage(error).includes('Credentials not found')) {
           return {
+            isError: true,
             content: [{
               type: "text",
               text: "Authentication required. Please run the script with the 'auth' argument to authenticate: `node index.ts auth`"
@@ -371,6 +360,7 @@ function createMcpServer() {
 
         if (errorMessage(error).includes('permission') || errorMessage(error).includes('access_denied')) {
           return {
+            isError: true,
             content: [{
               type: "text",
               text: "Permission denied accessing assignments. You need to re-authenticate with the proper scopes. Please run the script with the 'auth' argument: `node index.ts auth` and ensure you grant all requested permissions."
@@ -380,6 +370,7 @@ function createMcpServer() {
 
         if (errorMessage(error).includes('not found')) {
           return {
+            isError: true,
             content: [{
               type: "text",
               text: `Course with ID ${courseId} not found. Please check the course ID and try again.`
@@ -388,6 +379,7 @@ function createMcpServer() {
         }
 
         return {
+          isError: true,
           content: [{ type: "text", text: `Error fetching assignments: ${errorMessage(error)}` }]
         };
       }

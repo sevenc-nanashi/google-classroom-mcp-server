@@ -8,6 +8,7 @@ Changes:
 - Migrate to TypeScript
 - Add HTTP server mode
 - Add course work materials retrieval
+- Retrieve submission status for all your assignments
 
 ----
 
@@ -144,6 +145,15 @@ Use the 'assignments' tool with the courseId parameter to get assignments and yo
 
 Parameters:
 - `courseId`: The ID of the course (can be obtained from the `courses` tool)
+
+Returns all pages of assignments and your own submissions in `yourSubmissions`. Match each submission's `courseWorkId` to an assignment's `id` to see its status:
+
+- `NEW` / `CREATED`: Not yet turned in
+- `TURNED_IN`: Submitted
+- `RETURNED`: Returned by the teacher
+- `RECLAIMED_BY_STUDENT`: Submission taken back by the student
+
+Each [submission](https://developers.google.com/workspace/classroom/reference/rest/v1/courses.courseWork.studentSubmissions) also includes `late` and `assignedGrade` when provided by Google. `summary.submissionsFound` counts all submission records, including work not yet turned in. Retrieval failures return a tool error instead of an empty submission list. Uses the existing `classroom.coursework.me.readonly` permission.
 
 #### 4. `course-work-materials` - Get materials for a specific course
 
